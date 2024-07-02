@@ -27,4 +27,20 @@ cloudinary.config({
     }
 }
 
-export {uploadOnCloudinary}
+const deleteFromCloudinary = async (publicId) => {
+    try {
+        const result = await cloudinary.uploader.destroy(publicId);
+        return result;
+    } catch (error) {
+        throw new Error("Error deleting the avatar from Cloudinary");
+    }
+};
+
+const getCloudinaryPublicId = (url) => {
+    const parts = url.split('/');
+    const publicIdWithExtension = parts[parts.length - 1];
+    const publicId = publicIdWithExtension.split('.')[0];
+    return publicId;
+};
+
+export {uploadOnCloudinary, deleteFromCloudinary, getCloudinaryPublicId}
