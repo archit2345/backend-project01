@@ -39,19 +39,78 @@ const createTweet = asyncHandler(async (req, res) => {
 
 })
 
+//*************************************************************************
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
-    const {userId} = req.params
-    if(!isValidObjectId(userId)){
-        throw new ApiError(400, "User ID is wrong")
+    const {page=1, limit=30,} = req.query
+    const { userId } = req.params;
+    if (!userId || !isValidObjectId(userId)) {
+       return res.status(400).json(new apiError(400, "Invalid user id") && "invalid user ID or Cant find ID");
     }
-
-    //extract the user
-    const user = await User.findById(req.user?._id);
-    if (!user) {
-        throw new ApiError(400, "User not found");
+  
+    const skip = (page - 1) * limit;
+  
+  
+    const userTweets = await Tweet.aggregate([
+      {
+        $match: {
+          owner: new mongoose.Types.ObjectId(userId),
+        },
+      },{
+        $sort: {
+          createdAt: -1,
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "tweet",
+          as: "likes",
+        }
+      },
+      {
+        $project: {
+          content: 1,
+          createdAt: 1,
+          owner: 1,
+          likesCount: { $size: "$likes" },
+          username: { $arrayElemAt: ["$user.username", 0] },
+          profilePicture: { $arrayElemAt: ["$user.avatar", 0] },
+        }, 
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: parseInt(limit),
+      }
+    ]);
+  
+    if (userTweets.length === 0) {
+      return res.status(404).json(new apiError("User tweets not found", 404));
     }
-})
+  
+    const allTweetsCount = await Tweet.countDocuments({ owner: userId });
+  
+  
+    return res.status(200).json(
+      new ApiResponse(
+         200,
+        { userTweets, allTweetsCount, page, totalPages: Math.ceil(allTweetsCount / limit) },
+         "User tweets",
+      )
+    );
+  
+  });
 
 const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
