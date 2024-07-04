@@ -45,7 +45,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     const {page=1, limit=30,} = req.query
     const { userId } = req.params;
     if (!userId || !isValidObjectId(userId)) {
-       return res.status(400).json(new apiError(400, "Invalid user id") && "invalid user ID or Cant find ID");
+       return res.status(400).json(new ApiError(400, "Invalid user id") && "invalid user ID or Cant find ID");
     }
   
     const skip = (page - 1) * limit;
@@ -96,7 +96,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     ]);
   
     if (userTweets.length === 0) {
-      return res.status(404).json(new apiError("User tweets not found", 404));
+      return res.status(404).json(new ApiError("User tweets not found", 404));
     }
   
     const allTweetsCount = await Tweet.countDocuments({ owner: userId });

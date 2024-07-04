@@ -8,6 +8,61 @@ const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
     const {videoId} = req.params
     const {page = 1, limit = 10} = req.query
+    
+    if (!videoId || !isValidObjectId(videoId)) {
+        return res.status(400).json(new ApiError(400, "Invalid user id"));
+    }
+
+    const userComments = await mongoose.Aggregate(
+        [
+            {
+                $match: {
+                    video: new mongoose.Types.ObjectId(videoId),
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField : "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                }
+            }, 
+            {
+                $lookup: {
+                    from : "likes",
+                    localField: "_id",
+                    foreignField: "comment",
+                    as : "likes"
+                }
+            },
+            {
+                $project: {
+                  content: 1,
+                  createdAt: 1,
+                  owner: 1,
+                  likesCount: { $size: "$likes" },
+                  username: { $arrayElemAt: ["$user.username", 0] },
+                  profilePicture: { $arrayElemAt: ["$user.avatar", 0] },
+                }, 
+            },
+        ]
+    )
+
+    if(userComments.length == 0){
+        throw new ApiError(404, "comments not fetched successfully")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, userComments, "Here are your user comments")
+    )
 
 })
 
