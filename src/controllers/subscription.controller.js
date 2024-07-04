@@ -61,7 +61,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
             {
                 $lookup: {
                     from: "users",
-                    localField: "subscriber",
+                    localField: "channel",
                     foreignField: "_id",
                     as: "userDetails",
                     pipeline: [
@@ -108,8 +108,36 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
                     subscriber : new mongoose.Types.ObjectId(subscriberId)
                 }
             },
-            
+
+            {
+                $lookup: {
+                    from: "Users",
+                    localField: "subscriber",
+                    foreignField: "_id",
+                    as: "subscribeddd",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                username: 1,
+                                fullName: 1,
+                                avatar: 1
+                            }
+                        }
+                    ]
+                }
+            }
         ]
+    )
+
+    const channels = channelsSubscribed.map(item => item.subscribeddd[0]);
+    if(channels.length == 0){
+        throw new ApiError(404, "No channels found")
+    }
+
+    return res.status(200)
+    .json(
+        new ApiResponse(200, channels, "successful")
     )
 })
 
